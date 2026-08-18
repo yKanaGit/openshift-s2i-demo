@@ -15,6 +15,12 @@ const contentTypes = {
 
 const server = http.createServer((req, res) => {
   const cleanPath = req.url.split('?')[0];
+
+  if (cleanPath === '/health') {
+    res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+    return res.end(JSON.stringify({ status: 'ok' }));
+  }
+
   const requested = cleanPath === '/' ? '/index.html' : cleanPath;
   const filePath = path.join(publicDir, requested);
 
