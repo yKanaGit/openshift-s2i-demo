@@ -1,6 +1,6 @@
-# OpenShift S2I + OpenShift Pipelines Demo
+# OpenShift S2I + GitHub Webhook Demo
 
-A small Node.js web application for demonstrating **OpenShift Source-to-Image (S2I)** and automatic application updates with **Red Hat OpenShift Pipelines**.
+A small Node.js web application for demonstrating **OpenShift Source-to-Image (S2I)** and automatic application updates after a GitHub push.
 
 This repository intentionally contains **no Containerfile / Dockerfile**.
 
@@ -29,11 +29,9 @@ Application running
 ```text
 GitHub Push
       ↓
-Pipelines as Code
+GitHub Webhook
       ↓
-OpenShift PipelineRun
-      ↓
-Existing S2I BuildConfig starts a new build
+Existing BuildConfig starts a new S2I build
       ↓
 ImageStream is updated
       ↓
@@ -46,8 +44,6 @@ Updated application
 
 ```text
 .
-├── .tekton/
-│   └── pipelinerun.yaml
 ├── package.json
 ├── server.js
 ├── public/
@@ -74,48 +70,76 @@ For the demo, use the OpenShift Developer Console.
 
 This demonstrates that OpenShift can build and run the application directly from source code without a Containerfile.
 
-## 2. Pipeline for subsequent Git updates
+## 2. Configure automatic rebuilds with a GitHub webhook
 
-The Pipelines as Code definition is stored at:
-
-```text
-.tekton/pipelinerun.yaml
-```
-
-It listens for pushes to `main` and performs two visible steps:
+After the first S2I deployment, the application has a BuildConfig named:
 
 ```text
-s2i-build → verify-rollout
+openshift-s2i-demo
 ```
 
-### s2i-build
-
-The Pipeline reuses the **BuildConfig created by the first S2I deployment**:
+Confirm that your user can manage the build resources:
 
 ```bash
-oc start-build openshift-s2i-demo --commit=<Git commit> --follow --wait
+oc auth can-i update buildconfigs
+oc auth can-i create builds
 ```
 
-This means the initial deployment and CI build use the same S2I build mechanism.
+Both should return `yes`.
 
-### verify-rollout
+### Check the GitHub webhook trigger
 
-After the S2I build completes, the Pipeline waits until the Deployment has rolled out the new image.
+```bash
+oc get bc openshift-s2i-demo -o yaml
+```
 
-## 3. Prerequisites for automatic Pipeline execution
+Look under `spec.triggers` for a trigger of type `GitHub`.
 
-Before the demo, configure **Pipelines as Code** for this GitHub repository.
+If a GitHub trigger does not exist, add one:
 
-Required items:
+```bash
+oc set triggers bc/openshift-s2i-demo --from-github
+```
 
-- Red Hat OpenShift Pipelines Operator installed
-- Pipelines as Code enabled
-- This GitHub repository connected to Pipelines as Code
-- ServiceAccount `pipeline` allowed to start the BuildConfig and read the Deployment
+### Get the webhook URL
 
-The GitHub/Pipelines as Code connection is setup work and does not need to be shown during the demo.
+Run:
 
-## 4. Demo procedure
+```bash
+oc describe bc openshift-s2i-demo
+```
+
+Find the **GitHub Webhook** URL in the output.
+
+If the URL shows `<secret>`, inspect the BuildConfig to determine whether the webhook uses an inline secret or a Secret reference:
+
+```bash
+oc get bc openshift-s2i-demo -o yaml
+```
+
+Use the actual secret value in the webhook URL. Do not enter the literal string `<secret>` in GitHub.
+
+### Register the webhook in GitHub
+
+In this repository, open:
+
+```text
+Settings → Webhooks → Add webhook
+```
+
+Configure:
+
+```text
+Payload URL:   <OpenShift GitHub webhook URL>
+Content type:  application/json
+Secret:        leave empty
+Events:        Just the push event
+Active:        enabled
+```
+
+This setup is done once before the demo.
+
+## 3. Demo procedure
 
 ### Part A: Show S2I
 
@@ -125,7 +149,7 @@ Use **Import from Git** to create `openshift-s2i-demo` and wait for the S2I buil
 
 Open the Route and show the running application.
 
-### Part B: Show CI/CD
+### Part B: Show automatic updates
 
 Edit a visible value in:
 
@@ -135,19 +159,33 @@ public/index.html
 
 Commit the change to the `main` branch.
 
-Then open:
+The push automatically triggers:
 
 ```text
-Developer → Pipelines → PipelineRuns
+GitHub Push
+      ↓
+Webhook
+      ↓
+S2I Build
+      ↓
+New container image
+      ↓
+Automatic rollout
 ```
 
-Show the PipelineRun progressing through:
+Watch the new build:
 
-```text
-s2i-build → verify-rollout
+```bash
+oc get builds -w
 ```
 
-Finally refresh the application Route and show that the GitHub change has been deployed.
+Watch the new Pod rollout:
+
+```bash
+oc get pods -w
+```
+
+Finally, refresh the application Route and confirm that the GitHub change is visible.
 
 ## Key message for the demo
 
@@ -155,11 +193,11 @@ Finally refresh the application Route and show that the GitHub change has been d
 Initial deployment:
 Source → S2I → Container Image → Application
 
-After CI/CD setup:
-Git Push → Pipeline → S2I rebuild → New Image → Automatic rollout
+After webhook setup:
+Git Push → S2I rebuild → New Image → Automatic rollout
 ```
 
-The application build stays based on S2I throughout the demonstration.
+The developer only changes application source code in GitHub. OpenShift handles the rebuild and rollout automatically.
 
 ## Local run
 
