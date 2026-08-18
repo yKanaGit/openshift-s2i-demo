@@ -1,0 +1,50 @@
+apiVersion: tekton.dev/v1
+kind: PipelineRun
+metadata:
+  generateName: s2i-demo-
+  annotations:
+    pipelinesascode.tekton.dev/on-event: "[push]"
+    pipelinesascode.tekton.dev/on-target-branch: "[refs/heads/main]"
+spec:
+  serviceAccountName: pipeline
+  params:
+    - name: git-revision
+      value: "{{ revision }}"
+  pipelineSpec:
+    params:
+      - name: git-revision
+        type: string
+    tasks:
+      - name: s2i-build
+        params:
+          - name: git-revision
+            value: $(params.git-revision)
+        taskSpec:
+          params:
+            - name: git-revision
+              type: string
+          steps:
+            - name: build
+              image: quay.io/openshift/origin-cli:latest
+              script: |
+                #!/usr/bin/env bash
+                set -eu
+                echo "Starting S2I build for commit $(params.git-revision)"
+                oc start-build openshift-s2i-demo \
+                  --commit="$(params.git-revision)" \
+                  --follow \
+                  --wait
+
+      - name: verify-rollout
+        runAfter:
+          - s2i-build
+        taskSpec:
+          steps:
+            - name: verify
+              image: quay.io/openshift/origin-cli:latest
+              script: |
+                #!/usr/bin/env bash
+                set -eu
+                echo "Waiting for the new image to roll out..."
+                oc rollout status deployment/openshift-s2i-demo --timeout=180s
+                echo "Application update completed."
