@@ -1,0 +1,13 @@
+{
+  "name": "openshift-s2i-demo",
+  "version": "1.0.0",
+  "description": "OpenShift S2I demo application",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "license": "MIT"
+}
