@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>OpenShift S2I Demo</title>
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="brand">OpenShift<span>Care</span></div>
+      <nav>
+        <a class="active" href="#">Dashboard</a>
+        <a href="#">Patients</a>
+        <a href="#">Appointments</a>
+        <a href="#">Analytics</a>
+      </nav>
+      <div class="s2i-badge">Built with OpenShift S2I</div>
+    </aside>
+
+    <main class="content">
+      <header>
+        <div>
+          <p class="eyebrow">HEALTH OPERATIONS</p>
+          <h1>Good afternoon, Dr. Sato</h1>
+          <p class="subtitle">Here is today’s care overview.</p>
+        </div>
+        <div class="profile">YS</div>
+      </header>
+
+      <section class="stats">
+        <article class="card stat-card"><span>Today’s patients</span><strong>24</strong><small>+12% from yesterday</small></article>
+        <article class="card stat-card"><span>Appointments</span><strong>18</strong><small>3 waiting</small></article>
+        <article class="card stat-card"><span>Care score</span><strong>96%</strong><small>Stable</small></article>
+        <article class="card stat-card"><span>Avg. wait</span><strong>8 min</strong><small>-2 min this week</small></article>
+      </section>
+
+      <section class="grid">
+        <article class="card chart-card">
+          <div class="card-title"><h2>Patient visits</h2><span>Last 7 days</span></div>
+          <div class="chart">
+            <div style="height:38%"><span>Mon</span></div>
+            <div style="height:55%"><span>Tue</span></div>
+            <div style="height:72%"><span>Wed</span></div>
+            <div style="height:62%"><span>Thu</span></div>
+            <div style="height:84%"><span>Fri</span></div>
+            <div style="height:48%"><span>Sat</span></div>
+            <div style="height:66%"><span>Sun</span></div>
+          </div>
+        </article>
+
+        <article class="card appointments">
+          <div class="card-title"><h2>Upcoming</h2><span>Today</span></div>
+          <div class="appointment"><div class="avatar">AK</div><div><strong>Aiko Kato</strong><small>10:30 · General checkup</small></div><b>Ready</b></div>
+          <div class="appointment"><div class="avatar">TM</div><div><strong>Takumi Mori</strong><small>11:15 · Follow-up</small></div><b>Waiting</b></div>
+          <div class="appointment"><div class="avatar">HN</div><div><strong>Hana Noda</strong><small>13:00 · Consultation</small></div><b>Confirmed</b></div>
+        </article>
+      </section>
+
+      <section class="card activity">
+        <div class="card-title"><h2>Platform status</h2><span class="live">● Live</span></div>
+        <div class="status-row"><div><strong>Application</strong><small>Node.js application served from source</small></div><span>Healthy</span></div>
+        <div class="status-row"><div><strong>Build strategy</strong><small>Source-to-Image (S2I)</small></div><span>Source</span></div>
+        <div class="status-row"><div><strong>Containerfile</strong><small>No Containerfile required</small></div><span>Not needed</span></div>
+      </section>
+    </main>
+  </div>
+</body>
+</html>
