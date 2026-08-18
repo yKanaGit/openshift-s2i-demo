@@ -1,0 +1,36 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: openshift-s2i-demo
+  labels:
+    app: openshift-s2i-demo
+    app.kubernetes.io/name: openshift-s2i-demo
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: openshift-s2i-demo
+  template:
+    metadata:
+      labels:
+        app: openshift-s2i-demo
+    spec:
+      containers:
+        - name: openshift-s2i-demo
+          image: image-registry.openshift-image-registry.svc:5000/openshift-s2i-demo/openshift-s2i-demo:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8080
+              protocol: TCP
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 20
