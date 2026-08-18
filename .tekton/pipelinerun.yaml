@@ -1,0 +1,101 @@
+apiVersion: tekton.dev/v1
+kind: PipelineRun
+metadata:
+  name: s2i-demo-push
+  annotations:
+    pipelinesascode.tekton.dev/on-event: "[push]"
+    pipelinesascode.tekton.dev/on-target-branch: "[refs/heads/main]"
+    pipelinesascode.tekton.dev/cancel-in-progress: "true"
+spec:
+  serviceAccountName: pipeline
+  params:
+    - name: app-name
+      value: openshift-s2i-demo
+    - name: git-revision
+      value: "{{ revision }}"
+    - name: repo-url
+      value: "{{ repo_url }}"
+  pipelineSpec:
+    params:
+      - name: app-name
+        type: string
+      - name: git-revision
+        type: string
+      - name: repo-url
+        type: string
+    tasks:
+      - name: source-change
+        params:
+          - name: repo-url
+            value: $(params.repo-url)
+          - name: git-revision
+            value: $(params.git-revision)
+        taskSpec:
+          params:
+            - name: repo-url
+              type: string
+            - name: git-revision
+              type: string
+          steps:
+            - name: show-source
+              image: registry.access.redhat.com/ubi9/ubi-minimal:latest
+              script: |
+                #!/usr/bin/env bash
+                set -eu
+                echo "======================================"
+                echo " CI: Source change detected"
+                echo "======================================"
+                echo "Repository: $(params.repo-url)"
+                echo "Commit:     $(params.git-revision)"
+                echo "Next:       OpenShift S2I build"
+
+      - name: s2i-build
+        runAfter:
+          - source-change
+        params:
+          - name: app-name
+            value: $(params.app-name)
+          - name: git-revision
+            value: $(params.git-revision)
+        taskSpec:
+          params:
+            - name: app-name
+              type: string
+            - name: git-revision
+              type: string
+          steps:
+            - name: start-s2i-build
+              image: quay.io/openshift/origin-cli:latest
+              script: |
+                #!/usr/bin/env bash
+                set -eu
+                echo "======================================"
+                echo " CI: Starting OpenShift S2I build"
+                echo "======================================"
+                oc start-build "$(params.app-name)" \
+                  --commit="$(params.git-revision)" \
+                  --follow \
+                  --wait
+
+      - name: deploy
+        runAfter:
+          - s2i-build
+        params:
+          - name: app-name
+            value: $(params.app-name)
+        taskSpec:
+          params:
+            - name: app-name
+              type: string
+          steps:
+            - name: rollout
+              image: quay.io/openshift/origin-cli:latest
+              script: |
+                #!/usr/bin/env bash
+                set -eu
+                echo "======================================"
+                echo " CD: Deploying the new application"
+                echo "======================================"
+                oc rollout restart deployment/"$(params.app-name)"
+                oc rollout status deployment/"$(params.app-name)" --timeout=180s
+                echo "Deployment completed."
